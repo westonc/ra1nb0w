@@ -184,6 +184,13 @@ Array.prototype.shuffle = function(){
     }
 };
 
+if(!NodeList.prototype.forEach) {
+	NodeList.prototype.forEach = function (fn) {
+		for(var i=0; i<this.length; i++) 
+			fn(this[i]);
+	}
+}
+
 Math.randIntIncl = function (min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
