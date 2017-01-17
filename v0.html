@@ -1,0 +1,463 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<title></title>
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- Place favicon.ico in the root directory -->
+<style id="colors">
+</style>
+<style>
+body {
+	background: #042029;
+	background: #475b63;
+	background: #444;
+	font-family: helvetica, arial, sans-serif;
+}
+body.visual-bell {
+	background: red;
+}
+#page {
+	position: relative;
+	display: inline-block;
+}
+#numbers {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: inline-block;
+}
+#numbers li, #halp, #help-close {
+	display: inline-block;
+	width: 2em;
+	height: 2em;
+	border-radius: 1em;
+	border: 1px solid #555;
+	border: 1px solid rgba(64,64,64,0.5);
+	vertical-align: middle;
+	line-height: 2em;
+	text-align: center;
+	margin-right: 4px;
+	background: white;
+}
+#numbers li.selected-for-assignment {
+	background: #bfffbf;
+}
+#numbers li.assigned {
+	background: #999;
+}
+#numbers li.assigned.selected-for-assignment {
+	background: #bfffbf;
+}
+#numbers li.assigned.selected-for-resignation {
+	background: #ffbfbf;
+}
+
+table#main {
+	margin-top: 1em;
+}
+
+table#main th,
+table#main td {
+	width: 2em;
+	height: 2em;
+}
+table#main td {
+	border-radius: 1em;
+	border: 1px solid #505050;
+	line-height: 2em;
+	text-align: center;
+	vertical-align: middle;
+}
+#pointerx:before {
+	content: '➤'
+}
+#help-content {
+	position: absolute;
+	display: none;
+	background: rgba(63,63,63,0.9);
+	color: white;
+	height: 100%;
+	line-height: 1.35;
+}
+#help-content #help-close {
+	line-height: 2em;
+}
+#help-content #help-close:after{
+	content: '×';
+	font-size: 300%;
+	color: rgb(63,63,63);
+	display: inline-block;
+	position: relative;
+	top: -10%;
+}
+#help-content.on {
+	display: block;
+	z-index: 10;
+}
+#help-content .content {
+	margin: 0.5em;
+}
+#help-content ul {
+	margin: 0;
+	padding: 0 0 0 1em;
+}
+#game-won {
+	position: absolute;
+	display: none;
+	width: 100%;
+	top: 45%;
+	left: 0;
+	background: #59B200;
+	border-top: 3px solid #333;
+	border-bottom: 3px solid #333;
+	padding: 4px;
+	text-align: center;
+}
+#game-won .text {
+	font-size: larger;
+	font-weight: bold;
+}
+#game-won .play-again {
+	position: absolute;
+	right: 10%;
+	top: 22%;
+	background: #333;
+	color: white;
+	border-radius: 0.5em;
+	padding: 4px 0.5em;
+}
+#game-won .time {
+	font-size: smaller;
+}
+#game-won.on {
+	display: block;	
+}
+
+</style>
+</head>
+<body>
+<div id="page">
+<a id="halp">?</a>
+<ul id="numbers">
+</ul>
+<table id="main">
+</table>
+<div id="game-won">
+	<div class="text">Game Won</div>
+	<div class="time"></div>
+	<div class="play-again">Play Again</div>
+</div>
+<div id="help-content">
+	<a id="help-close"></a>
+	<div class="content">
+		<div class="preface">Last night while everyone was sleeping, aliens quietly invaded the earth and replaced all the numerals in the world with colors. <p>However, they weren't malevolent, just playful! So they left behind a modular addition table (and a single hint) which <em>you</em> can use to decode which color belongs with which number.</p></div>
+		<ul>
+			<li>Touch a number to select it.</li>
+			<li>Once you've selected a number, touch a color to assign it.</li>
+			<li>If you change your mind, touch a color to prepare to "resign" it.</li>
+			<li>Then touch the number to complete the resignation.</li>
+			<li>Or, assign a new number over the number you assigned before.</li>
+			<li>If you make assignments that don't fit with your earlier assignments, you'll see The Red Flash of Error. You don't want The Red Flash of Error, do you?</li>
+		</ul>
+	</div> <!-- /.content -->
+	<div id="pointer"></div>
+</div>
+<script>
+Array.prototype.shuffle = function(){
+    var counter = this.length, temp, index;
+
+    // While there are elements in the array
+    while (counter > 0) {
+        // Pick a random index
+        index = (Math.random() * counter--) | 0;
+
+        // And swap the last element with it
+        temp = this[counter];
+        this[counter] = this[index];
+        this[index] = temp;
+    }
+};
+
+Math.randIntIncl = function (min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// (function () {
+
+	var numbers = [0,1,2,3,4,5,6,7,8,9];
+	var colors = ['red','yellow','pink', 
+		'#14C700' /*green*/, '#B800C2' /*purple*/, 'orange', 
+		'#4D7AFF' /*blue*/,'silver', '#fcf5d9' /*ivory*/, 'cyan']; 
+	/*var colors = ['#a57900','#bc3800','#cf1e1e','#c41a73','#5856bf', 
+		'#2273cf', '#299286','#738c00', '#fcf5d9', 'yellow'];*/
+	var li, tr, th, td;
+	var ul = document.getElementById('numbers');
+	var table = document.getElementById('main');
+	var ss = document.styleSheets[0];
+	var selectedForAssignment = null;
+	var selectedForResignation = null;
+	var startTime;
+
+	document.getElementById("halp").addEventListener('click',showHelp);
+	document.getElementById("help-close").addEventListener('click',hideHelp);
+	document.querySelector("#game-won .play-again").addEventListener('click',reset);
+
+	var setup = function () {
+
+		numbers.shuffle();
+		colors.shuffle();
+
+		tr = document.createElement('tr');
+		th = document.createElement('th');
+		th.classList.add('headercross');
+		tr.appendChild(th);
+		for(var n=0; n<10; n++) {
+			li = document.createElement('li');
+			li.innerText = n;
+			li.addEventListener('click',receiveNumberInput);
+			ul.appendChild(li);
+			ss.insertRule('.n'+n+' { background: ' + colors[n] + '; }');
+			th = document.createElement('th');
+			th.addEventListener('click',receiveColorInput);
+			th.classList.add('n'+numbers[n]);
+			tr.classList.add("headrow");
+			tr.appendChild(th);
+		}
+		table.appendChild(tr);
+
+		for(var row=0; row<10; row++) {
+			tr = document.createElement('tr');
+			tr.classList.add('n'+numbers[row]);
+			th = document.createElement('th');
+			th.classList.add('n'+numbers[row],'rowhead');
+			th.addEventListener('click',receiveColorInput);
+			tr.appendChild(th);
+			for(var col=0; col<10; col++) {
+				td = document.createElement('td');
+				n = ((numbers[row]+numbers[col])%10);
+				td.classList.add('n'+ n,'r'+numbers[row],'c'+numbers[col]);
+				td.addEventListener('click',receiveColorInput);
+				tr.appendChild(td);
+			}
+			tr.classList.add('n'+numbers[row]);
+			table.appendChild(tr);
+		}
+
+		selectedForAssignment = selectedForResignation = null;
+
+		//pick a number as an initial "hint"
+		var hint = randomInitialNumber();
+
+		table.querySelectorAll('tr .n'+hint).forEach(function (el) { 
+			el.innerText = hint; 
+			el.classList.add('assigned');
+		});
+		ul.querySelectorAll("li").forEach(function (li) {
+			if(li.innerText.trim() == hint) {
+				li.classList.add("assigned");
+			}
+		});
+
+		startTime = new Date();
+	}
+	setup();
+
+	function randomInitialNumber() {
+		return [1,2,3,4,6,7,8,9][Math.randIntIncl(0,7)];
+	}
+
+	function reset() {
+		table.innerHTML = '';
+		ul.innerHTML = '';
+		document.getElementById("game-won").classList.remove("on");
+		setup();	
+	}
+
+	function receiveNumberInput(evt) {
+		var li = evt.target || evt.srcElement;
+		if(selectedForResignation && selectedForResignation == li) {
+			var num = li.innerText;
+			table.querySelectorAll('tr .selected-for-resignation')
+				.forEach(function (el) { 
+					el.innerText = ''; 
+					el.classList.remove("assigned","selected-for-resignation");
+				});
+			selectedForResignation.classList.remove(
+				"selected-for-resignation",
+				"assigned"
+			);
+			selectedForResignation = null;
+			return;
+		}
+
+		var previouslySelected = (li == selectedForAssignment);
+
+		//is this number already assigned to a color? 
+		if(li.classList.contains("assigned")) {
+			return; // ignore selection
+		}
+		//is a number already selected for assignment? 
+		if(selectedForAssignment != null) {
+			//unselect that
+			selectedForAssignment.classList.remove("selected-for-assignment");
+			selectedForAssignment = null;
+		}
+		// select this number, unless it was selected
+		if(!previouslySelected) {
+			li.classList.add("selected-for-assignment");
+			selectedForAssignment = li;
+		}
+	}
+
+	function receiveColorInput(evt) {
+		var cell = evt.target || evt.srcElement;
+
+		if(cell.classList.contains("selected-for-resignation")) {
+			unselectForResignation();
+			return;
+		}
+			
+		var cell_assigned = cell.classList.contains("assigned");
+		if(!selectedForAssignment && !cell_assigned) {
+			return;
+		}
+
+		var number = selectedForAssignment &&
+			parseInt(selectedForAssignment.innerText,10);
+		var color = (function () {
+			var matches = cell.className.match(/\b(n[0-9])\b/);
+			return matches[1];
+		})();
+
+		if(cell_assigned) { //if previously assigned
+			if(selectedForAssignment) { // we're doing a re-assignment
+				if(!checkAssignmentForPlausibility(cell,number,color))
+					return;
+				// 1st remove assignment lock from the previous number
+				var prev = cell.innerText;
+				ul.querySelectorAll("li")[prev].classList.remove("assigned");
+				// update the colors assignment
+				table.querySelectorAll('tr .'+color)
+					.forEach(function (el) { 
+						el.innerText = number; 
+					});
+				selectedForAssignment.classList.remove("selected-for-assignment");
+				selectedForAssignment.classList.add("assigned");
+				selectedForAssignment = null;
+			} else { // we're selecting for resignation
+				selectForResignation(color);
+			}
+			return;
+		}	
+
+		if(!checkAssignmentForPlausibility(cell,number,color)) {
+			return false;
+		}
+
+		table.querySelectorAll('tr .'+color).forEach(function (el) { 
+			el.innerText = number; 
+			el.classList.add('assigned');
+		});
+
+		selectedForAssignment.classList.remove("selected-for-assignment");
+		selectedForAssignment.classList.add("assigned");
+		selectedForAssignment = null;
+
+		//is the game won? 
+		if(ul.querySelectorAll("li.assigned").length > 9) {
+			signalGameWon();	
+		}
+	}
+
+	function checkAssignmentForPlausibility(cell,number,color) {
+		var plausible = true;
+		table.querySelectorAll("tr td."+color).forEach(function(td) {
+			var col = td.cellIndex;
+			var row = td.parentNode.rowIndex - 1;
+			var summand_c=parseInt(table.querySelectorAll(".headrow th")[col].innerText,10);
+			var summand_r=parseInt(table.querySelectorAll("th.rowhead")[row].innerText,10);
+			if(!summand_c || !summand_r) {
+				console.log("one summand missing! No possible conflict.");
+				return;
+			}
+			var sum = summand_c + summand_r;
+			console.log("(",summand_c,"+",summand_r,"=",sum,") % 10 = ",sum%10);
+			if(sum % 10 != number) {
+				console.log("not plausible");
+				plausible = false;
+				signalImplausibility();	
+			} else {
+				console.log("plausible!");
+			}
+		});
+
+		return plausible;
+	}
+
+	function signalImplausibility() {
+		document.body.classList.add("visual-bell");
+		setTimeout(function () {
+			document.body.classList.remove("visual-bell");
+		},50);
+	}
+
+	function unselectForResignation() {
+		document.querySelectorAll(".selected-for-resignation")
+			.forEach(function (emt) {
+				emt.classList.remove("selected-for-resignation");
+			});
+		selectedForResignation = null;
+	}
+
+	function selectForResignation(color) {
+		var color_cells = table.querySelectorAll('tr .'+color);
+		color_cells.forEach(function (el) {
+			el.classList.add("selected-for-resignation");
+		});
+		var num_to_resign = color_cells[0].innerHTML;
+		selectedForResignation = ul.querySelectorAll("li")[num_to_resign];
+		selectedForResignation.classList.add("selected-for-resignation"); 
+	}
+
+	function showHelp() {
+		var helpTrigger = document.getElementById("halp");	
+		//var helpTriggerRect = helpTrigger.getBoundingClientRect();
+		var helpContent = document.querySelector("#help-content");	
+		//helpContent.style.top = helpTriggerRect.top + 'px';
+		//helpContent.style.left = helpTriggerRect.left + 'px';
+		helpContent.style.top = helpTrigger.offsetTop + 'px';
+		helpContent.style.left = helpTrigger.offsetLeft + 'px';
+		helpContent.style.width = table.offsetWidth + 'px';
+		helpContent.classList.add("on");
+	}
+
+	function hideHelp() {
+		var helpContent = document.querySelector("#help-content");	
+		helpContent.classList.add("out");
+		setTimeout(function () {
+			helpContent.classList.remove("on");
+		},67);
+	}
+
+	function nn(n) { return (n > 9) ? n : '0'+n; }
+
+	function signalGameWon() {
+		var gameWon = document.getElementById("game-won");
+		var rawseconds = Math.round((new Date() - startTime)/1000);
+		var s = rawseconds % 60;
+		var rawminutes = Math.floor(rawseconds/60);
+		var m = rawminutes % 60;
+		var h = Math.floor(rawminutes/60);
+		gameWon.querySelector(".time").innerText = nn(h)+':'+nn(m)+':'+nn(s);
+		gameWon.classList.add("on");
+	}
+
+</script>
+</body>
+</html>
