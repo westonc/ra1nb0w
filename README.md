@@ -10,6 +10,6 @@ That's the game. You can play it here:
 
 	http://weston.canncentral.org/work/portfolio/ra1nb0w/
 
-This is also meant to be an experiment in taking a modest but reasonably complex front-end application from basic viablility to a state of more refined architecture and UX, documenting decisions faced and choices made along the way. 
+This is also meant to be an experiment in taking a modest but reasonably complex front-end application from basic viablility to a state of more refined architecture and UX, documenting decisions faced and choices made along the way.
 
-v0 is a snapshot of the application in its basic viabile state. 
+v0 is a snapshot of the application in its basic viabile state. It doesn't use any libraries or third-party polyfills, and was put together without any particular consideration for architecture, and without any studied UX effort beyond basic function
